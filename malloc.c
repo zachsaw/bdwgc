@@ -253,11 +253,7 @@ GC_API void * GC_CALL GC_generic_malloc(size_t lb, int k)
 }
 
 /* Allocate lb bytes of composite (pointerful) data */
-#ifdef THREAD_LOCAL_ALLOC
-  GC_INNER void * GC_core_malloc(size_t lb)
-#else
-  GC_API void * GC_CALL GC_malloc(size_t lb)
-#endif
+GC_INNER void * GC_innercore_malloc(size_t lb, int k)
 {
     void *op;
     void **opp;
@@ -271,7 +267,7 @@ GC_API void * GC_CALL GC_generic_malloc(size_t lb, int k)
         LOCK();
         if (EXPECT((op = *opp) == 0, FALSE)) {
             UNLOCK();
-            return (GENERAL_MALLOC((word)lb, NORMAL));
+            return (GENERAL_MALLOC((word)lb, k));
         }
         GC_ASSERT(0 == obj_link(op)
                   || ((word)obj_link(op)
@@ -284,8 +280,40 @@ GC_API void * GC_CALL GC_generic_malloc(size_t lb, int k)
         UNLOCK();
         return op;
    } else {
-       return(GENERAL_MALLOC(lb, NORMAL));
+       return(GENERAL_MALLOC(lb, k));
    }
+}
+
+#ifdef THREAD_LOCAL_ALLOC
+  GC_INNER void * GC_core_malloc(size_t lb)
+#else
+  GC_API void * GC_CALL GC_malloc(size_t lb)
+#endif
+{
+    return GC_innercore_malloc(lb, NORMAL);
+}
+
+/* Clone (allocate new memory and copy from) the memory pointed to by p. */
+GC_API void * GC_CALL GC_clone(const void * p)
+{
+    hdr * hhdr;
+    void * result;
+    void * base;
+    size_t lb;
+
+    base = GC_base((void *) p);
+    if (base == NULL) return NULL;
+
+    hhdr = HDR(base);
+    lb = hhdr -> hb_sz;
+    GC_ASSERT(lb != 0);
+    result = GC_innercore_malloc(lb - 1, hhdr -> hb_obj_kind);
+                                 /* Size is 1 less than original because */
+                                 /* GC_innercore_malloc will increase it */
+                                 /* back to the original size            */
+                                 /* (i.e. rounds up to boundary).        */
+    if (EXPECT(result != NULL, TRUE)) BCOPY(base, result, lb);
+    return result;
 }
 
 /* Allocate lb bytes of pointerful, traced, but not collectable data */
