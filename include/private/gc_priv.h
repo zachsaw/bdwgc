@@ -1793,9 +1793,11 @@ GC_INNER ptr_t GC_allocobj(size_t sz, int kind);
                                 /* free list nonempty, and return its   */
                                 /* head.  Sz is in granules.            */
 
-GC_INNER void GC_clone_finalizer(void * src_p, void * dest_p);
+GC_INNER int GC_clone_finalizer(void * src_p, void * dest_p);
                                 /* Registers the same finalizer for     */
-                                /* dest_p if src_p has one.             */
+                                /* dest_p if src_p has one. Returns     */
+                                /* TRUE if no out of memory condition   */
+                                /* was encountered.                     */
 
 #ifdef GC_ADD_CALLER
 # define GC_DBG_RA GC_RETURN_ADDR,

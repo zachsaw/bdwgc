@@ -431,10 +431,10 @@ STATIC void GC_unreachable_finalize_mark_proc(ptr_t p)
 /* marking for finalization ordering.  Any objects marked       */
 /* by that procedure will be guaranteed to not have been        */
 /* finalized when this finalizer is invoked.                    */
-STATIC void GC_register_finalizer_inner(void * obj,
-                                        GC_finalization_proc fn, void *cd,
-                                        GC_finalization_proc *ofn, void **ocd,
-                                        finalization_mark_proc mp)
+STATIC int GC_register_finalizer_inner(void * obj,
+                                       GC_finalization_proc fn, void *cd,
+                                       GC_finalization_proc *ofn, void **ocd,
+                                       finalization_mark_proc mp)
 {
     ptr_t base;
     struct finalizable_object * curr_fo, * prev_fo;
@@ -499,7 +499,7 @@ STATIC void GC_register_finalizer_inner(void * obj,
               GC_free((void *)new_fo);
             }
 #         endif
-          return;
+          return TRUE;
         }
         prev_fo = curr_fo;
         curr_fo = fo_next(curr_fo);
@@ -512,7 +512,7 @@ STATIC void GC_register_finalizer_inner(void * obj,
         if (ocd) *ocd = 0;
         if (ofn) *ofn = 0;
         UNLOCK();
-        return;
+        return TRUE;
       }
       GET_HDR(base, hhdr);
       if (EXPECT(0 == hhdr, FALSE)) {
@@ -520,7 +520,7 @@ STATIC void GC_register_finalizer_inner(void * obj,
         if (ocd) *ocd = 0;
         if (ofn) *ofn = 0;
         UNLOCK();
-        return;
+        return TRUE;
       }
       new_fo = (struct finalizable_object *)
         GC_INTERNAL_MALLOC(sizeof(struct finalizable_object),NORMAL);
@@ -532,7 +532,7 @@ STATIC void GC_register_finalizer_inner(void * obj,
                 (*oom_fn)(sizeof(struct finalizable_object));
       if (0 == new_fo) {
         /* No enough memory.  *ocd and *ofn remains unchanged.  */
-        return;
+        return FALSE;
       }
       /* It's not likely we'll make it here, but ... */
       LOCK();
@@ -551,6 +551,7 @@ STATIC void GC_register_finalizer_inner(void * obj,
     GC_fo_entries++;
     GC_fo_head[index] = new_fo;
     UNLOCK();
+    return TRUE;
 }
 
 GC_API void GC_CALL GC_register_finalizer(void * obj,
@@ -590,7 +591,7 @@ GC_API void GC_CALL GC_register_finalizer_unreachable(void * obj,
                                 ocd, GC_unreachable_finalize_mark_proc);
 }
 
-GC_INNER void GC_clone_finalizer(void * src_p, void * dest_p)
+GC_INNER int GC_clone_finalizer(void * src_p, void * dest_p)
 {
     struct finalizable_object * curr_fo;
     size_t index;
@@ -612,12 +613,12 @@ GC_INNER void GC_clone_finalizer(void * src_p, void * dest_p)
           cd = curr_fo -> fo_client_data;
           mp = curr_fo -> fo_mark_proc;
           UNLOCK();
-          GC_register_finalizer_inner(result, fn, cd, 0, 0, mp);
-          return;
+          return GC_register_finalizer_inner(result, fn, cd, 0, 0, mp);
       }
       curr_fo = fo_next(curr_fo);
     }
     UNLOCK();
+    return TRUE;
 }
 
 #ifndef NO_DEBUGGING

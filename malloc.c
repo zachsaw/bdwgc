@@ -314,7 +314,10 @@ GC_API void * GC_CALL GC_clone(const void * p, int clone_finalizer)
                                  /* (i.e. rounds up to boundary).        */
     if (EXPECT(result != NULL, TRUE)) {
         if (clone_finalizer) {
-            GC_clone_finalizer(base, result);
+            if (!GC_clone_finalizer(base, result)) {
+                GC_free(result);
+                return NULL;
+            }
         }        
         BCOPY(base, result, lb);
     }
