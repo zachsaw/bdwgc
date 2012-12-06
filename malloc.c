@@ -294,7 +294,7 @@ GC_INNER void * GC_innercore_malloc(size_t lb, int k)
 }
 
 /* Clone (allocate new memory and copy from) the memory pointed to by p. */
-GC_API void * GC_CALL GC_clone(const void * p)
+GC_API void * GC_CALL GC_clone(const void * p, int clone_finalizer)
 {
     hdr * hhdr;
     void * result;
@@ -312,7 +312,12 @@ GC_API void * GC_CALL GC_clone(const void * p)
                                  /* GC_innercore_malloc will increase it */
                                  /* back to the original size            */
                                  /* (i.e. rounds up to boundary).        */
-    if (EXPECT(result != NULL, TRUE)) BCOPY(base, result, lb);
+    if (EXPECT(result != NULL, TRUE)) {
+        if (clone_finalizer) {
+            GC_clone_finalizer(base, result);
+        }        
+        BCOPY(base, result, lb);
+    }
     return result;
 }
 

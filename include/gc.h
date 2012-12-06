@@ -401,10 +401,10 @@ GC_API GC_ATTR_MALLOC GC_ATTR_ALLOC_SIZE(1) void * GC_CALL
         GC_malloc_stubborn(size_t /* size_in_bytes */);
 
 GC_API GC_ATTR_MALLOC GC_ATTR_ALLOC_SIZE(1) void * GC_CALL
-        GC_clone(const void * /* p */);
+        GC_clone(const void * /* p */, int /* clone_finalizer */);
 /* Clone existing GC memory pointed to by p. Clone allocates new memory */
 /* of the same type and memory copies bytes pointed to by p into the    */
-/* new memory.                                                          */
+/* new memory. If clone_finalizer is true, finalizer is also cloned.    */
 
 /* GC_memalign() is not well tested.                                    */
 GC_API GC_ATTR_MALLOC GC_ATTR_ALLOC_SIZE(2) void * GC_CALL

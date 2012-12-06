@@ -590,6 +590,36 @@ GC_API void GC_CALL GC_register_finalizer_unreachable(void * obj,
                                 ocd, GC_unreachable_finalize_mark_proc);
 }
 
+GC_INNER void GC_clone_finalizer(void * src_p, void * dest_p)
+{
+    struct finalizable_object * curr_fo;
+    size_t index;
+    ptr_t base, result;
+    GC_finalization_proc fn;
+    ptr_t cd;
+    finalization_mark_proc mp;
+    DCL_LOCK_STATE;
+
+    base = (ptr_t)src_p;
+    result = (ptr_t)dest_p;
+    LOCK();
+    index = HASH2(base, log_fo_table_size);
+    curr_fo = GC_fo_head[index];
+    while (curr_fo != 0) {
+      GC_ASSERT(GC_size(curr_fo) >= sizeof(struct finalizable_object));
+      if (curr_fo -> fo_hidden_base == GC_HIDE_POINTER(base)) {
+          fn = curr_fo -> fo_fn;
+          cd = curr_fo -> fo_client_data;
+          mp = curr_fo -> fo_mark_proc;
+          UNLOCK();
+          GC_register_finalizer_inner(result, fn, cd, 0, 0, mp);
+          return;
+      }
+      curr_fo = fo_next(curr_fo);
+    }
+    UNLOCK();
+}
+
 #ifndef NO_DEBUGGING
   STATIC void GC_dump_finalization_links(struct dl_hashtbl_s* dl_hashtbl)
   {
