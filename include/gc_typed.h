@@ -96,13 +96,6 @@ GC_API GC_ATTR_MALLOC GC_ATTR_ALLOC_SIZE(1) void * GC_CALL
                 /* The returned object is cleared.                      */
 
 GC_API GC_ATTR_MALLOC GC_ATTR_ALLOC_SIZE(1) void * GC_CALL
-        GC_malloc_statically_typed(size_t /* size_in_bytes */,
-                                   const GC_word * /* GC_bitmap bm */);
-                /* Same as the above but caller guarantees bm points to */
-                /* a static data area containing the bitmap and has at  */
-                /* least as many bits as there are size_in_bytes.       */
-
-GC_API GC_ATTR_MALLOC GC_ATTR_ALLOC_SIZE(1) void * GC_CALL
         GC_malloc_explicitly_typed_ignore_off_page(size_t /* size_in_bytes */,
                                                    GC_descr /* d */);
 #ifdef GC_DEBUG
