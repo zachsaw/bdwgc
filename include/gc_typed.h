@@ -49,6 +49,10 @@ typedef GC_word * GC_bitmap;
 
 typedef GC_word GC_descr;
 
+GC_API void GC_CALL GC_init_explicit_typing(void);
+                /* Initializes explicit typing support. This needs to   */
+                /* be called before you use GC_descriptor               */
+                /* (GC_make_descriptor calls it implicitly).            */
 GC_API GC_descr GC_CALL GC_make_descriptor(const GC_word * /* GC_bitmap bm */,
                                            size_t /* len */);
                 /* Return a type descriptor for the object whose layout */
@@ -66,6 +70,13 @@ GC_API GC_descr GC_CALL GC_make_descriptor(const GC_word * /* GC_bitmap bm */,
                 /* may consume some amount of a finite resource.  This  */
                 /* is intended to be called once per type, not once     */
                 /* per allocation.                                      */
+GC_API GC_descr GC_CALL GC_descriptor(const GC_word * /* GC_bitmap bm */);
+                /* Similar to the above but client promises that bm is  */
+                /* located in static memory and never changes. First    */
+                /* word of bm specifies the length and subsequent words */
+                /* are as per GC_make_descriptor's bm argument.         */
+                /* GC_init_explicit_typing needs to be called prior to  */
+                /* this function.                                       */
 
 /* It is possible to generate a descriptor for a C type T with  */
 /* word aligned pointer fields f1, f2, ... as follows:                  */
@@ -94,27 +105,11 @@ GC_API GC_ATTR_MALLOC GC_ATTR_ALLOC_SIZE(1) void * GC_CALL
 GC_API GC_ATTR_MALLOC GC_ATTR_ALLOC_SIZE(1) void * GC_CALL
         GC_malloc_explicitly_typed_ignore_off_page(size_t /* size_in_bytes */,
                                                    GC_descr /* d */);
-
-GC_API GC_ATTR_MALLOC void * GC_CALL
-        GC_calloc_explicitly_typed(size_t /* nelements */,
-                                   size_t /* element_size_in_bytes */,
-                                   GC_descr /* d */);
-        /* Allocate an array of nelements elements, each of the */
-        /* given size, and with the given descriptor.           */
-        /* The element size must be a multiple of the byte      */
-        /* alignment required for pointers.  E.g. on a 32-bit   */
-        /* machine with 16-bit aligned pointers, size_in_bytes  */
-        /* must be a multiple of 2.                             */
-        /* Returned object is cleared.                          */
-
 #ifdef GC_DEBUG
 # define GC_MALLOC_EXPLICITLY_TYPED(bytes, d) GC_MALLOC(bytes)
-# define GC_CALLOC_EXPLICITLY_TYPED(n, bytes, d) GC_MALLOC((n) * (bytes))
 #else
 # define GC_MALLOC_EXPLICITLY_TYPED(bytes, d) \
                         GC_malloc_explicitly_typed(bytes, d)
-# define GC_CALLOC_EXPLICITLY_TYPED(n, bytes, d) \
-                        GC_calloc_explicitly_typed(n, bytes, d)
 #endif
 
 #ifdef __cplusplus

@@ -616,6 +616,9 @@ GC_INNER mse * GC_mark_from(mse *mark_stack_top, mse *mark_stack,
   ptr_t limit;  /* (Incl) limit of current candidate    */
                                 /* range                                */
   word descr;
+  word * descr_p;
+  signed_word length;
+  word mask = 1;
   ptr_t greatest_ha = GC_greatest_plausible_heap_addr;
   ptr_t least_ha = GC_least_plausible_heap_addr;
   DECLARE_HDR_CACHE;
@@ -694,34 +697,41 @@ GC_INNER mse * GC_mark_from(mse *mark_stack_top, mse *mark_stack,
           break;
         case GC_DS_BITMAP:
           mark_stack_top--;
-#         ifdef ENABLE_TRACE
-            if ((word)GC_trace_addr >= (word)current_p
-                && (word)GC_trace_addr < (word)(current_p
-                                                + WORDS_TO_BYTES(WORDSZ-2))) {
-              GC_log_printf("GC:%u Tracing from %p bitmap descr %lu\n",
-                        (unsigned)GC_gc_no, current_p, (unsigned long)descr);
-            }
-#         endif /* ENABLE_TRACE */
           descr &= ~GC_DS_TAGS;
-          credit -= WORDS_TO_BYTES(WORDSZ/2); /* guess */
-          while (descr != 0) {
-            if ((signed_word)descr < 0) {
-              current = *(word *)current_p;
-              FIXUP_POINTER(current);
-              if (current >= (word)least_ha && current < (word)greatest_ha) {
-                PREFETCH((ptr_t)current);
-#               ifdef ENABLE_TRACE
-                  if (GC_trace_addr == current_p) {
-                    GC_log_printf("GC:%u Considering(3) %p -> %p\n",
-                               (unsigned)GC_gc_no, current_p, (ptr_t)current);
-                  }
-#               endif /* ENABLE_TRACE */
-                PUSH_CONTENTS((ptr_t)current, mark_stack_top,
-                              mark_stack_limit, current_p, exit1);
-              }
+          descr_p = (word *)descr;
+          length = *(signed_word*)descr_p;
+          credit -= WORDS_TO_BYTES(length);
+          descr_p++;
+          while (length > 0) {
+            descr = *descr_p;
+            if (descr == 0) {
+                length -= sizeof(word)*8;
+                current_p += sizeof(word)*sizeof(word)*8;
+                descr_p++;
+                continue;
             }
-            descr <<= 1;
-            current_p += sizeof(word);
+            while (mask != 0) {
+              if (descr & mask) {
+                current = *(word *)current_p;
+                FIXUP_POINTER(current);
+                if (current >= (word)least_ha && current < (word)greatest_ha) {
+                  PREFETCH((ptr_t)current);
+  #               ifdef ENABLE_TRACE
+                    if (GC_trace_addr == current_p) {
+                      GC_log_printf("GC:%u Considering(3) %p -> %p\n",
+                                 (unsigned)GC_gc_no, current_p, (ptr_t)current);
+                    }
+  #               endif /* ENABLE_TRACE */
+                  PUSH_CONTENTS((ptr_t)current, mark_stack_top,
+                                mark_stack_limit, current_p, exit1);
+                }
+              }
+              mask <<= 1;
+              length--;
+              current_p += sizeof(word);
+            }
+            mask = 1;
+            descr_p++;
           }
           continue;
         case GC_DS_PROC:
