@@ -903,6 +903,9 @@ GC_INNER void GC_finalize(void)
       GC_finalizer_nested = 0;
 #   endif
   }
+
+  if (GC_post_finalize_notifier != NULL)
+      (*GC_post_finalize_notifier)();
 }
 
 #ifndef JAVA_FINALIZATION_NOT_NEEDED

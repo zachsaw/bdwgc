@@ -145,6 +145,8 @@ GC_bool GC_quiet = 0; /* used also in pcr_interface.c */
 /* All accesses to it should be synchronized to avoid data races.       */
 GC_finalizer_notifier_proc GC_finalizer_notifier =
                                         (GC_finalizer_notifier_proc)0;
+GC_post_finalize_notifier_proc GC_post_finalize_notifier =
+                                        (GC_post_finalize_notifier_proc)0;
 
 #ifdef GC_FORCE_UNMAP_ON_GCOLLECT
   /* Has no effect unless USE_MUNMAP.                           */
@@ -1927,6 +1929,27 @@ GC_API GC_finalizer_notifier_proc GC_CALL GC_get_finalizer_notifier(void)
     DCL_LOCK_STATE;
     LOCK();
     fn = GC_finalizer_notifier;
+    UNLOCK();
+    return fn;
+}
+
+GC_API void GC_CALL 
+        GC_set_post_finalize_notifier(GC_post_finalize_notifier_proc fn)
+{
+    /* fn may be 0 (means no finalizer notifier). */
+    DCL_LOCK_STATE;
+    LOCK();
+    GC_post_finalize_notifier = fn;
+    UNLOCK();
+}
+
+GC_API GC_post_finalize_notifier_proc GC_CALL 
+        GC_get_post_finalize_notifier(void)
+{
+    GC_post_finalize_notifier_proc fn;
+    DCL_LOCK_STATE;
+    LOCK();
+    fn = GC_post_finalize_notifier;
     UNLOCK();
     return fn;
 }

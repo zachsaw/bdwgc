@@ -192,6 +192,20 @@ GC_API GC_ATTR_DEPRECATED GC_finalizer_notifier_proc GC_finalizer_notifier;
 GC_API void GC_CALL GC_set_finalizer_notifier(GC_finalizer_notifier_proc);
 GC_API GC_finalizer_notifier_proc GC_CALL GC_get_finalizer_notifier(void);
 
+typedef void (GC_CALLBACK * GC_post_finalize_notifier_proc)(void);
+GC_API GC_ATTR_DEPRECATED GC_post_finalize_notifier_proc 
+        GC_post_finalize_notifier;
+                        /* Invoked by the collector when the finalizer  */
+                        /* the finished running.  The allocation lock   */
+                        /* is held while the notifier is invoked.  May  */
+                        /* be 0 (means no notifier).  Both the supplied */
+                        /* setter and the getter acquire the GC lock    */
+                        /* (to avoid data races).                       */
+GC_API void GC_CALL 
+        GC_set_post_finalize_notifier(GC_post_finalize_notifier_proc);
+GC_API GC_post_finalize_notifier_proc GC_CALL 
+        GC_get_post_finalize_notifier(void);
+
 GC_API GC_ATTR_DEPRECATED int GC_dont_gc;
                         /* != 0 ==> Don't collect.  In versions 6.2a1+, */
                         /* this overrides explicit GC_gcollect() calls. */
@@ -402,9 +416,10 @@ GC_API GC_ATTR_MALLOC GC_ATTR_ALLOC_SIZE(1) void * GC_CALL
 
 GC_API GC_ATTR_MALLOC GC_ATTR_ALLOC_SIZE(1) void * GC_CALL
         GC_clone(const void * /* p */, int /* clone_finalizer */);
-/* Clone existing GC memory pointed to by p. Clone allocates new memory */
-/* of the same type and memory copies bytes pointed to by p into the    */
-/* new memory. If clone_finalizer is true, finalizer is also cloned.    */
+/* Clone existing GC memory pointed to by p.  Clone allocates new       */
+/* memory of the same type and memory copies bytes pointed to by p into */
+/* the new memory.  If clone_finalizer is true, finalizer is also       */
+/* cloned.                                                              */
 
 /* GC_memalign() is not well tested.                                    */
 GC_API GC_ATTR_MALLOC GC_ATTR_ALLOC_SIZE(2) void * GC_CALL
